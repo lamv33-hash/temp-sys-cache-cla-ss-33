@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1116">
+<title>Daily Fitness Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Bricolage+Grotesque:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>if(window.tailwind)tailwind.config={corePlugins:{preflight:false},theme:{screens:{fold:'600px',wide:'768px',xl:'1200px'}}};</script>
+<style>
+:root{
+  color-scheme:dark;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#0e1116; --panel:#171b23; --panel2:#1e232d; --line:#2a303c;
+  --text:#e8ebf1; --muted:#8c94a6;
+  --protein:#ff7a6b; --carbs:#f5b84b; --fat:#5ab8e6; --accent:#9d8cff; --ok:#6fd3a0;
+  --display:'Bricolage Grotesque','DM Sans',system-ui,sans-serif;
+  --body:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.5}
+h1{font-family:var(--display);font-size:clamp(26px,5vw,36px);margin:0;letter-spacing:-.02em}
+.date{color:var(--muted)}
+.view{display:grid}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;min-width:0}
+h2{font-family:var(--display);font-size:19px;margin:0 0 14px;letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+h2 small{font-family:var(--body);font-weight:400;font-size:13px;color:var(--muted)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* donut */
+.donut-row{display:flex;gap:18px;align-items:center;flex-wrap:wrap;justify-content:center}
+.donut{position:relative;width:200px;height:200px;flex:none}
+.donut svg{width:100%;height:100%;transform:rotate(-90deg)}
+.seg{fill:none;stroke-width:22;cursor:pointer;transition:stroke-width .15s,opacity .15s}
+.seg.dim{opacity:.3}.seg.on{stroke-width:27}
+.donut .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+.mid b{font-family:var(--display);font-size:30px;line-height:1.1}
+.mid span{color:var(--muted);font-size:13px}
+.legend{display:flex;flex-direction:column;gap:8px;flex:1;min-width:150px}
+.lg{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid transparent;border-radius:10px;padding:8px 10px;text-align:left;width:100%}
+.lg.on{border-color:var(--line)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.lg .n{flex:1}.lg .v{color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px}
+.bars{margin-top:16px;display:grid;gap:8px}
+.bar{height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:3px;transition:width .3s}
+.barlab{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:3px}
+/* logger */
+input,select{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%;min-width:0}
+input::placeholder{color:#667086}
+.btn{background:var(--accent);color:#14112b;border:0;border-radius:10px;padding:9px 16px;font-weight:700}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);font-weight:500;padding:6px 12px;font-size:13px}
+ul.foods{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto}
+.food{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.food .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.food .mc{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.food .kc{font-variant-numeric:tabular-nums;font-weight:700;width:64px;text-align:right}
+.x{background:none;border:0;color:var(--muted);font-size:18px;line-height:1;padding:4px 8px;border-radius:8px}
+.x:hover{color:var(--protein)}
+.empty{color:var(--muted);padding:14px 0}
+/* weight */
+.wt-top{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.big{font-family:var(--display);font-size:34px;font-weight:700;line-height:1}
+.delta{font-size:14px;color:var(--ok)}
+.wform{display:flex;gap:8px;margin-left:auto}
+.wform input{width:96px}
+#wchart{width:100%;height:auto;display:block;overflow:visible}
+.tip{font-size:13px;color:var(--muted);min-height:20px;margin-top:4px}
+/* workouts */
+.tabs{display:flex;gap:6px;margin-bottom:14px;background:var(--panel2);padding:4px;border-radius:12px}
+.tab{flex:1;background:none;border:0;border-radius:9px;padding:8px 4px;color:var(--muted);font-weight:500}
+.tab[aria-selected=true]{background:var(--bg);color:var(--text)}
+.prog{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.prog .bar{flex:1}
+.ex{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
+.ex input{appearance:none;width:22px;height:22px;border-radius:7px;border:2px solid #475069;padding:0;flex:none;display:grid;place-content:center;cursor:pointer}
+.ex input:checked{background:var(--ok);border-color:var(--ok)}
+.ex input:checked::after{content:"";width:6px;height:11px;border:solid #0e1116;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.ex .t{flex:1}.ex .s{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.ex input:checked ~ .t{color:var(--muted);text-decoration:line-through}
+.foot{margin-top:16px;display:flex;justify-content:flex-end}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+[hidden]{display:none!important}
+.ex a{color:inherit;text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px}
+.ex a::after{content:" \25B6";font-size:10px;color:var(--accent)}
+.xf{display:grid;grid-template-columns:110px 2fr 1fr auto;gap:8px;margin-top:14px}
+@media(max-width:620px){.xf{grid-template-columns:1fr 1fr}.xf input:nth-child(2),.xf button{grid-column:span 2}}
+.rform{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.rform .w2{grid-column:span 2}.rform .w4{grid-column:span 4}
+@media(max-width:620px){.rform .w2{grid-column:span 4}}
+.note{color:var(--muted);font-size:13px;margin:0 0 12px}
+.scroll{overflow-x:auto}
+table.cal{width:100%;border-collapse:collapse;min-width:760px}
+.cal th,.cal td{padding:6px;border-top:1px solid var(--line);text-align:left;vertical-align:middle;font-weight:400}
+.cal thead th{color:var(--muted);font-size:13px;border-top:0}
+.cal tr.now th{color:var(--accent)}
+.cal select{padding:7px 8px;font-size:13px}
+.cal .tot{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:1px 8px}
+.cues{margin:0;padding-left:18px;display:grid;gap:8px}
+.cues b{font-weight:700}
+.wk{display:flex;align-items:center;gap:12px;padding:10px 8px;border-top:1px solid var(--line);flex-wrap:wrap;border-radius:8px}
+.wk.cur{background:var(--panel2)}
+.wk .wn{width:58px;font-weight:700}.wk .wd{flex:1;min-width:180px}
+.wk label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer}
+.wk input{appearance:none;width:20px;height:20px;border-radius:6px;border:2px solid #475069;padding:0;display:grid;place-content:center;cursor:pointer}
+.wk input:checked{background:var(--ok);border-color:var(--ok)}
+.wk input:checked::after{content:"";width:5px;height:10px;border:solid #0e1116;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.stats{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:14px}
+.stats .big{font-size:26px}.stats span{display:block;color:var(--muted);font-size:13px}
+a.link{color:var(--accent)}
+.ov{position:fixed;inset:0;background:rgba(5,7,10,.72);display:grid;place-items:center;padding:18px;z-index:50}
+.ovbox{width:100%;max-width:400px}
+.fl{display:grid;gap:6px;margin-bottom:12px;color:var(--muted);font-size:13px}
+#gprog{margin:6px 0 14px}
+.fwide{display:flex;gap:28px;flex-wrap:wrap;align-items:center}.fwide .donut-row{flex:1 1 380px;justify-content:flex-start}.fside{flex:1 1 280px;min-width:0}
+#fring{width:100%;height:100%;transform:rotate(-90deg)}
+.fcol{display:flex;flex-direction:column;gap:8px;flex:1;min-width:160px}
+.fcol .fl{margin:0}
+#fhist{margin-top:0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:12px;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:10px 14px;max-width:calc(100% - 24px);box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.toast span{font-size:14px}
+#wchart{max-height:300px}
+.h2o-row{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+#h2oglass{width:96px;flex:none}
+.h2o-side{flex:1;min-width:190px;display:flex;flex-direction:column;gap:10px}
+.h2o-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.h2o-btns button,.h2o-act button{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 4px;font-weight:500}
+.h2o-btns button:hover{border-color:var(--fat)}
+.h2o-act{display:flex;gap:6px}
+.h2o-act input{width:80px}
+.h2o-week{display:flex;gap:8px;align-items:flex-end;height:64px;margin-top:16px}
+.h2o-week div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;font-size:11px;color:var(--muted)}
+.h2o-week i{display:block;width:100%;border-radius:4px;background:var(--fat);min-height:3px;opacity:.85}
+.h2o-week i.hit{background:var(--ok)}
+@media(min-width:600px){.toast{bottom:calc(16px + env(safe-area-inset-bottom,0px))}}
+#nav button{background:none;border:0;color:var(--muted);font-weight:500}
+#nav button[aria-current=true]{color:var(--text);background:var(--panel2)}
+#nav svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#ff input{padding-left:8px;padding-right:8px;font-size:14px}
+@media (pointer:coarse){input:not([type=checkbox]),select,.btn,#nav button,.h2o-btns button,.h2o-act button{min-height:44px}}
+</style>
+</head>
+<body>
+<div class="mx-auto w-full max-w-[1080px] px-3.5 pt-4 pb-28 fold:px-6 fold:pt-7 fold:pb-12">
+<header class="mb-4 flex flex-wrap items-end justify-between gap-2 fold:mb-6">
+  <h1>Fuel and training</h1>
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div class="date" id="today"></div><button class="btn ghost" id="goalbtn" type="button">Weight goals</button></div>
+</header>
+
+<nav id="nav" aria-label="Sections" class="fixed inset-x-0 bottom-0 z-30 flex border-t border-solid border-[var(--line)] bg-[var(--panel)] pb-[env(safe-area-inset-bottom)] fold:static fold:mb-5 fold:gap-1.5 fold:overflow-x-auto fold:rounded-2xl fold:border fold:p-1.5 fold:pb-1.5"></nav>
+<div class="view grid grid-cols-1 gap-3.5 fold:gap-4 wide:grid-cols-12" id="v-today">
+  <section class="card p-4 fold:p-5 wide:col-span-12" aria-labelledby="h-fast">
+    <h2 id="h-fast">Fasting clock <small id="fstate"></small></h2>
+    <div class="fwide">
+    <div class="donut-row">
+      <div class="donut" style="width:170px;height:170px">
+        <svg id="fring" viewBox="0 0 200 200" role="img" aria-label="Fasting progress ring"></svg>
+        <div class="mid" id="fmid"></div>
+      </div>
+      <div class="fcol">
+        <label class="fl">Plan<select id="fplan"></select></label>
+        <div class="note" id="finfo" style="margin:0"></div>
+        <button class="btn" id="fgo" type="button"></button>
+        <button class="btn ghost" id="fedit" type="button" hidden>Change start time</button>
+        <div id="fbox" style="display:none;gap:6px"><input type="datetime-local" id="fstart" aria-label="Fast start time"><button class="btn ghost" id="fsave" type="button">Save</button></div>
+      </div>
+    </div>
+    <div class="fside">
+    <ul class="foods" id="fhist" style="max-height:150px"></ul>
+    <p class="note" style="margin:10px 0 0">Fasting isn’t right for everyone. Check with your doctor first if you’re pregnant, have diabetes, take medication or have a history of disordered eating.</p>
+    </div>
+    </div>
+  </section>
+  <section class="card p-4 fold:p-5 wide:col-span-7" aria-labelledby="h-macro">
+    <h2 id="h-macro">Calories and macros <small>Select a slice for details</small></h2>
+    <div class="donut-row">
+      <div class="donut">
+        <svg viewBox="0 0 200 200" id="donut" role="img" aria-label="Macro split of calories eaten today"></svg>
+        <div class="mid" id="mid"></div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="bars" id="bars"></div>
+  </section>
+  <section class="card p-4 fold:p-5 wide:col-span-5" aria-labelledby="h-h2o">
+    <h2 id="h-h2o">Water <small id="h2osub"></small></h2>
+    <div class="h2o-row">
+      <svg id="h2oglass" viewBox="0 0 100 140" role="img" aria-label="Water glass showing today’s progress">
+        <defs><clipPath id="gc"><path d="M15 10 L85 10 L76 128 Q75.5 135 69 135 L31 135 Q24.5 135 24 128 Z"/></clipPath></defs>
+        <path d="M15 10 L85 10 L76 128 Q75.5 135 69 135 L31 135 Q24.5 135 24 128 Z" fill="#1e232d"/>
+        <rect id="h2ofill" x="0" y="135" width="100" height="0" clip-path="url(#gc)" style="fill:var(--fat)"/>
+        <path d="M15 10 L85 10 L76 128 Q75.5 135 69 135 L31 135 Q24.5 135 24 128 Z" fill="none" stroke="#475069" stroke-width="3" stroke-linejoin="round"/>
+      </svg>
+      <div class="h2o-side">
+        <div><div class="big" id="h2ototal">0 oz</div><div class="tip" id="h2oleft" style="margin:2px 0 0"></div></div>
+        <div class="h2o-btns" id="h2obtns"></div>
+        <div class="h2o-act"><input id="h2ocust" type="number" min="1" max="200" step="any" placeholder="oz" aria-label="Custom ounces"><button id="h2oadd" type="button">Add</button><button id="h2oundo" type="button">Undo last</button></div>
+        <label class="fl" style="margin:0">Daily goal (oz)<input id="h2ogoal" type="number" min="16" max="300" step="1"></label>
+      </div>
+    </div>
+    <div class="h2o-week" id="h2oweek" aria-label="Last 7 days of water"></div>
+  </section>
+
+  <section class="card p-4 fold:p-5 wide:col-span-12" aria-labelledby="h-log">
+    <h2 id="h-log">Food log <small id="logsum"></small></h2>
+    <form id="ff" class="mb-3.5 grid grid-cols-4 gap-2">
+      <input class="col-span-4" id="fn" placeholder="Food name" required aria-label="Food name" maxlength="60">
+      <input id="fp" type="number" min="0" step="any" placeholder="Protein g" aria-label="Protein grams">
+      <input id="fc" type="number" min="0" step="any" placeholder="Carbs g" aria-label="Carb grams">
+      <input id="ff2" type="number" min="0" step="any" placeholder="Fat g" aria-label="Fat grams">
+      <input id="fk" type="number" min="0" step="any" placeholder="kcal (auto)" aria-label="Calories, optional">
+      <button class="btn col-span-4" type="submit">Add food</button>
+    </form>
+    <ul class="foods" id="foods"></ul>
+  </section>
+
+  <section class="card p-4 fold:p-5 wide:col-span-12" aria-labelledby="h-w">
+    <h2 id="h-w">Weight trend <small>Last 7 days, lb</small></h2>
+    <div class="wt-top">
+      <div><div class="big" id="wnow">–</div><div class="delta" id="wdelta"></div></div>
+      <form class="wform" id="wf">
+        <input id="wi" type="number" min="50" max="700" step="0.1" placeholder="Today (lb)" aria-label="Today’s weight in pounds" required>
+        <button class="btn" type="submit">Log</button>
+      </form>
+    </div>
+    <div id="gprog"></div>
+    <svg id="wchart" viewBox="0 0 600 230" role="img" aria-label="Line chart of weight over the last seven days"></svg>
+    <div class="tip" id="wtip">Hover or tap a point to see that day.</div>
+  </section>
+
+
+</div>
+
+<div class="view grid grid-cols-1 gap-3.5 fold:gap-4 wide:grid-cols-12" id="v-plan" hidden>
+  <section class="card p-4 fold:p-5 wide:col-span-12" aria-labelledby="h-rec">
+    <h2 id="h-rec">Recipes <small id="rcount"></small></h2>
+    <form class="rform" id="rf">
+      <input class="w2" id="rn" placeholder="Recipe name" required maxlength="60" aria-label="Recipe name">
+      <select class="w2" id="rs" aria-label="Meal type"></select>
+      <input id="rp" type="number" min="0" step="any" placeholder="Protein g" aria-label="Protein grams">
+      <input id="rc" type="number" min="0" step="any" placeholder="Carbs g" aria-label="Carb grams">
+      <input id="rfat" type="number" min="0" step="any" placeholder="Fat g" aria-label="Fat grams">
+      <button class="btn" type="submit">Save recipe</button>
+      <input class="w4" id="rt" placeholder="Ingredients or notes (optional)" maxlength="200" aria-label="Notes">
+    </form>
+    <ul class="foods" id="rlist" style="max-height:340px"></ul>
+  </section>
+  <section class="card p-4 fold:p-5 wide:col-span-12" aria-labelledby="h-cal">
+    <h2 id="h-cal">This week’s plan <small>Pick a recipe for each slot</small></h2>
+    <div class="cal" id="cal"></div>
+    <div class="foot"><button class="btn ghost" id="logplan" type="button">Add today’s planned meals to food log</button></div>
+  </section>
+</div>
+
+<div class="view grid grid-cols-1 gap-3.5 fold:gap-4 wide:grid-cols-12" id="v-train" hidden>
+  <section class="card p-4 fold:p-5 wide:col-span-12" aria-labelledby="h-wo">
+    <h2 id="h-wo">Exercises <small>Select an exercise name to watch a how-to video</small></h2>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="prog"><span id="pt"></span><div class="bar"><i id="pb" style="background:var(--ok)"></i></div></div>
+    <div id="exs"></div>
+    <form class="xf" id="xf"><select id="xd" aria-label="Day"></select><input id="xn" placeholder="Add an exercise" required maxlength="50" aria-label="Exercise name"><input id="xs" placeholder="3 × 10" maxlength="14" aria-label="Sets and reps"><button class="btn" type="submit">Add</button></form>
+    <div class="foot"><button class="btn ghost" id="reset" type="button">Reset checklist</button></div>
+  </section>
+</div>
+
+<div class="view grid grid-cols-1 gap-3.5 fold:gap-4 wide:grid-cols-12" id="v-run" hidden>
+  <section class="card p-4 fold:p-5 wide:col-span-6" aria-labelledby="h-form">
+    <h2 id="h-form">How to run well <small>Form and habits</small></h2>
+    <ol class="cues">
+      <li><b>Run slower than you think.</b> You should be able to speak in full sentences. If not, walk until you can.</li>
+      <li><b>Take quick, short steps.</b> Aim for about 165–180 steps per minute and avoid reaching out with your front foot.</li>
+      <li><b>Stand tall.</b> Lean slightly from the ankles, keep your eyes 10–20 meters ahead and your shoulders low.</li>
+      <li><b>Land under your hips.</b> Keep your knees soft. The part of the foot that lands matters less than where it lands.</li>
+      <li><b>Keep arms loose.</b> Bend your elbows near 90°, swing front to back and keep your hands relaxed.</li>
+      <li><b>Breathe from your belly.</b> Breathe through your nose and mouth. Gasping means it’s time for a walk break.</li>
+    </ol>
+    <p class="note" style="margin-top:14px">Run three days a week with a rest day between. Keep weekly distance growth under about 10%, and ease off if you feel sharp pain.</p>
+    <a class="link" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=proper+running+form+for+beginners">Watch running form videos</a>
+  </section>
+  <section class="card p-4 fold:p-5 wide:col-span-6" aria-labelledby="h-plan">
+    <h2 id="h-plan">8-week plan to a continuous 5K <small id="runprog"></small></h2>
+    <p class="note">Start every session with a 5-minute brisk walk and finish with a 5-minute walk.</p>
+    <div id="runplan"></div>
+  </section>
+  <section class="card p-4 fold:p-5 wide:col-span-12" aria-labelledby="h-rl">
+    <h2 id="h-rl">Run log <small id="nextlong"></small></h2>
+    <div class="stats" id="rstats"></div>
+    <form class="xf" id="runf" style="grid-template-columns:1fr 1fr 1fr auto;margin:0 0 12px">
+      <input id="rd" type="date" required aria-label="Date">
+      <input id="rm" type="number" min="0.1" step="0.01" placeholder="Miles" required aria-label="Miles">
+      <input id="rmin" type="number" min="1" step="0.1" placeholder="Minutes" required aria-label="Minutes">
+      <button class="btn" type="submit">Log run</button>
+    </form>
+    <ul class="foods" id="runlist" style="max-height:220px"></ul>
+  </section>
+</div>
+
+<div class="view grid grid-cols-1 gap-3.5 fold:gap-4 wide:grid-cols-12" id="v-rest" hidden>
+  <section class="card p-4 fold:p-5 wide:col-span-12" aria-labelledby="h-rs">
+    <h2 id="h-rs">Restaurant menus</h2>
+    <div class="rform" style="margin-bottom:10px">
+      <select class="w2" id="chain" aria-label="Pick a restaurant"></select>
+      <input class="w2" id="sq" placeholder="Search items" aria-label="Search items">
+    </div>
+    <p class="note" id="rsrc"></p>
+    <ul class="foods" id="rslist" style="max-height:420px"></ul>
+  </section>
+  <section class="card p-4 fold:p-5 wide:col-span-12" aria-labelledby="h-my">
+    <h2 id="h-my">Add your own menu item</h2>
+    <p class="note" id="rnote">Connecting…</p>
+    <form class="rform" id="rsf">
+      <input class="w2" id="sr" list="chains" placeholder="Restaurant" required maxlength="50" aria-label="Restaurant">
+      <datalist id="chains"></datalist>
+      <input class="w2" id="si" placeholder="Menu item" required maxlength="70" aria-label="Menu item">
+      <input id="sk" type="number" min="0" step="any" placeholder="kcal" required aria-label="Calories">
+      <input id="sp" type="number" min="0" step="any" placeholder="Protein g" aria-label="Protein grams">
+      <input id="sc" type="number" min="0" step="any" placeholder="Carbs g" aria-label="Carb grams">
+      <input id="sf" type="number" min="0" step="any" placeholder="Fat g" aria-label="Fat grams">
+      <button class="btn w4" type="submit">Add item</button>
+    </form>
+  </section>
+</div>
+</div>
+
+<div id="toast" class="toast" role="status" hidden><span id="tmsg"></span><button class="btn ghost" id="tgo" type="button">See Today</button></div>
+
+<div id="setup" class="ov" role="dialog" aria-modal="true" aria-labelledby="h-setup" hidden>
+  <form id="setupform" class="card ovbox p-5">
+    <h2 id="h-setup">Set your weight goal</h2>
+    <p class="note">Your starting weight becomes today’s first entry, and the trend chart will show your goal line. You can change both numbers later.</p>
+    <label class="fl">Starting weight (lb)<input id="ws" type="number" min="50" max="700" step="0.1" required></label>
+    <label class="fl">Goal weight (lb)<input id="wg" type="number" min="50" max="700" step="0.1" required></label>
+    <p class="tip" id="serr" role="alert"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn ghost" id="scancel">Skip for now</button><button class="btn" type="submit">Save goals</button></div>
+  </form>
+</div>
+
+<script>
+const GOAL={kcal:2200,p:160,c:230,f:70};
+const MAC=[
+  {k:'p',name:'Protein',color:'var(--protein)',cal:4},
+  {k:'c',name:'Carbs',color:'var(--carbs)',cal:4},
+  {k:'f',name:'Fat',color:'var(--fat)',cal:9}
+];
+const SPLIT={
+  Push:[['Bench press','4 × 6'],['Overhead press','3 × 8'],['Incline dumbbell press','3 × 10'],['Lateral raises','3 × 15'],['Triceps pushdown','3 × 12']],
+  Pull:[['Deadlift','3 × 5'],['Pull-ups','4 × 8'],['Barbell row','3 × 8'],['Face pulls','3 × 15'],['Biceps curl','3 × 12']],
+  Legs:[['Back squat','4 × 6'],['Romanian deadlift','3 × 8'],['Leg press','3 × 12'],['Walking lunges','3 × 20'],['Calf raises','4 × 15']]
+};
+const $=id=>document.getElementById(id);
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+};
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const today=new Date();
+$('today').textContent=today.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
+const NS='http://www.w3.org/2000/svg';
+const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+const r1=n=>Math.round(n*10)/10;
+
+/* ---------- state ---------- */
+let foods=store.get('fd-foods',null);
+if(!foods){foods=[
+  {id:1,name:'Greek yogurt and berries',p:22,c:28,f:4},
+  {id:2,name:'Chicken rice bowl',p:45,c:70,f:14},
+  {id:3,name:'Protein shake',p:30,c:6,f:3}
+];}
+let profile=store.get('fd-profile',null);
+let weightsSample=false;
+let weights=store.get('fd-weights',null);
+if(!weights){
+  weightsSample=true;weights={};const seed=[192.4,191.8,192.0,191.1,190.6,190.9,190.2];
+  seed.forEach((w,i)=>{const d=new Date(today);d.setDate(d.getDate()-(6-i));weights[iso(d)]=w});
+}
+let tab=Object.keys(SPLIT)[0];
+let checks=store.get('fd-checks',{});
+let active=null;
+const extra=store.get('fd-extra',{});Object.keys(extra).forEach(k=>SPLIT[k]&&SPLIT[k].push(...extra[k]));
+const kcalOf=f=>f.kcal!=null?f.kcal:Math.round(f.p*4+f.c*4+f.f*9);
+
+/* ---------- donut ---------- */
+function renderMacros(){
+  const tot={p:0,c:0,f:0,kcal:0};
+  foods.forEach(x=>{tot.p+=x.p;tot.c+=x.c;tot.f+=x.f;tot.kcal+=kcalOf(x)});
+  const calParts=MAC.map(m=>({...m,g:tot[m.k],kc:tot[m.k]*m.cal}));
+  const sum=calParts.reduce((a,b)=>a+b.kc,0);
+  const svg=$('donut');svg.innerHTML='';
+  const R=76,C=2*Math.PI*R;
+  el('circle',{cx:100,cy:100,r:R,class:'seg',stroke:'#232936',style:'cursor:default'},svg);
+  let off=0;
+  if(sum>0){
+    calParts.forEach(m=>{
+      const len=C*m.kc/sum;if(len<=0)return;
+      const c=el('circle',{cx:100,cy:100,r:R,class:'seg'+(active===m.k?' on':active?' dim':''),
+        stroke:m.color,'stroke-dasharray':`${Math.max(len-2,0.5)} ${C}`,'stroke-dashoffset':-off,tabindex:0,
+        'aria-label':`${m.name}: ${r1(m.g)} grams`},svg);
+      c.style.stroke=m.color;
+      c.addEventListener('mouseenter',()=>setActive(m.k));
+      c.addEventListener('mouseleave',()=>setActive(null));
+      c.addEventListener('focus',()=>setActive(m.k));
+      c.addEventListener('blur',()=>setActive(null));
+      c.addEventListener('click',()=>setActive(active===m.k?null:m.k));
+      off+=len;
+    });
+  }
+  const a=calParts.find(m=>m.k===active);
+  $('mid').innerHTML=a
+    ?`<b>${Math.round(a.g)}g</b><span>${a.name}</span><span>${Math.round(a.kc)} kcal · ${sum?Math.round(a.kc/sum*100):0}%</span>`
+    :`<b>${Math.round(tot.kcal)}</b><span>of ${GOAL.kcal} kcal</span><span>${Math.max(GOAL.kcal-Math.round(tot.kcal),0)} left</span>`;
+  $('legend').innerHTML='';
+  calParts.forEach(m=>{
+    const b=document.createElement('button');b.type='button';b.className='lg'+(active===m.k?' on':'');
+    b.innerHTML=`<span class="dot" style="background:${m.color}"></span><span class="n">${m.name}</span><span class="v">${Math.round(m.g)}g${sum?' · '+Math.round(m.kc/sum*100)+'%':''}</span>`;
+    b.addEventListener('mouseenter',()=>setActive(m.k));
+    b.addEventListener('mouseleave',()=>setActive(null));
+    b.addEventListener('click',()=>setActive(active===m.k?null:m.k));
+    $('legend').appendChild(b);
+  });
+  const bars=[['Calories',tot.kcal,GOAL.kcal,'var(--accent)','kcal'],...MAC.map(m=>[m.name,tot[m.k],GOAL[m.k],m.color,'g'])];
+  $('bars').innerHTML=bars.map(([n,v,g,c,u])=>`<div><div class="barlab"><span>${n}</span><span>${Math.round(v)} / ${g} ${u}</span></div><div class="bar"><i style="width:${Math.min(v/g*100,100)}%;background:${c}"></i></div></div>`).join('');
+  $('logsum').textContent=`${foods.length} item${foods.length===1?'':'s'} · ${Math.round(tot.kcal)} kcal`;
+}
+function setActive(k){active=k;renderMacros()}
+
+/* ---------- food log ---------- */
+function renderFoods(){
+  const ul=$('foods');
+  if(!foods.length){ul.innerHTML='<li class="empty">Nothing logged yet. Add your first meal above.</li>';return}
+  ul.innerHTML='';
+  foods.forEach(f=>{
+    const li=document.createElement('li');li.className='food';
+    li.innerHTML=`<span class="nm"></span><span class="mc">P ${r1(f.p)} · C ${r1(f.c)} · F ${r1(f.f)}</span><span class="kc">${kcalOf(f)}</span><button class="x" type="button" aria-label="Remove entry">×</button>`;
+    li.querySelector('.nm').textContent=f.name;
+    li.querySelector('.x').addEventListener('click',()=>{foods=foods.filter(x=>x.id!==f.id);saveFoods()});
+    ul.appendChild(li);
+  });
+}
+function saveFoods(){store.set('fd-foods',foods);renderFoods();renderMacros()}
+$('ff').addEventListener('submit',e=>{
+  e.preventDefault();
+  const n=x=>Math.max(parseFloat($(x).value)||0,0);
+  const f={id:Date.now(),name:$('fn').value.trim(),p:n('fp'),c:n('fc'),f:n('ff2')};
+  if($('fk').value!=='')f.kcal=Math.round(n('fk'));
+  if(!f.name)return;
+  foods.push(f);e.target.reset();saveFoods();$('fn').focus();
+});
+
+/* ---------- weight chart ---------- */
+function renderWeight(){
+  renderGoal();
+  const days=[];for(let i=6;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);days.push({d,k:iso(d),w:weights[iso(d)]})}
+  const pts=days.filter(x=>x.w!=null);
+  const svg=$('wchart');svg.innerHTML='';
+  const W=600,H=230,L=40,Rr=14,T=14,B=30;
+  if(!pts.length){$('wnow').textContent='–';$('wdelta').textContent='Log a weight to start your trend.';return}
+  const vals=pts.map(p=>p.w);
+  const all=profile?[...vals,profile.goal]:vals;
+  let lo=Math.floor(Math.min(...all)-1),hi=Math.ceil(Math.max(...all)+1);
+  const X=i=>L+(W-L-Rr)*i/6,Y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  if(profile){const gy=Y(profile.goal);el('line',{x1:L,x2:W-Rr,y1:gy,y2:gy,stroke:'#6fd3a0','stroke-width':2,'stroke-dasharray':'6 5'},svg);const gt=el('text',{x:W-Rr,y:gy-6,'text-anchor':'end',fill:'#6fd3a0','font-size':11},svg);gt.textContent='Goal '+profile.goal;}
+  for(let i=0;i<=4;i++){
+    const v=lo+(hi-lo)*i/4,y=Y(v);
+    el('line',{x1:L,x2:W-Rr,y1:y,y2:y,stroke:'#2a303c','stroke-width':1},svg);
+    const t=el('text',{x:L-8,y:y+4,'text-anchor':'end',fill:'#8c94a6','font-size':11},svg);t.textContent=r1(v);
+  }
+  days.forEach((x,i)=>{const t=el('text',{x:X(i),y:H-8,'text-anchor':'middle',fill:'#8c94a6','font-size':11},svg);t.textContent=x.d.toLocaleDateString(undefined,{weekday:'short'})});
+  const xy=days.map((x,i)=>x.w!=null?[X(i),Y(x.w),x]:null).filter(Boolean);
+  const line=xy.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');
+  const defs=el('defs',{},svg);const g=el('linearGradient',{id:'ag',x1:0,y1:0,x2:0,y2:1},defs);
+  el('stop',{offset:'0%','stop-color':'#9d8cff','stop-opacity':.35},g);el('stop',{offset:'100%','stop-color':'#9d8cff','stop-opacity':0},g);
+  if(xy.length>1)el('path',{d:line+` L${xy[xy.length-1][0]} ${H-B} L${xy[0][0]} ${H-B} Z`,fill:'url(#ag)'},svg);
+  el('path',{d:line,fill:'none',stroke:'#9d8cff','stroke-width':3,'stroke-linejoin':'round','stroke-linecap':'round'},svg);
+  xy.forEach(([x,y,d])=>{
+    const c=el('circle',{cx:x,cy:y,r:5,fill:'#0e1116',stroke:'#9d8cff','stroke-width':3,tabindex:0,style:'cursor:pointer'},svg);
+    const show=()=>{$('wtip').textContent=`${d.d.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'})}: ${d.w} lb`;c.setAttribute('r',7)};
+    const hide=()=>c.setAttribute('r',5);
+    c.addEventListener('mouseenter',show);c.addEventListener('focus',show);c.addEventListener('click',show);
+    c.addEventListener('mouseleave',hide);c.addEventListener('blur',hide);
+  });
+  const first=pts[0].w,last=pts[pts.length-1].w,diff=r1(last-first);
+  $('wnow').textContent=last+' lb';
+  const dl=$('wdelta');
+  dl.textContent=pts.length<2?'Log more days to see a trend.':(diff===0?'No change this week':`${diff<0?'Down':'Up'} ${Math.abs(diff)} lb this week`);
+  dl.style.color=diff>0?'var(--protein)':'var(--ok)';
+}
+$('wf').addEventListener('submit',e=>{
+  e.preventDefault();const v=parseFloat($('wi').value);if(!v)return;
+  if(weightsSample){weights={};weightsSample=false}
+  weights[iso(today)]=r1(v);store.set('fd-weights',weights);e.target.reset();renderWeight();
+});
+
+/* ---------- workouts ---------- */
+function renderWork(){
+  const tabs=$('tabs');tabs.innerHTML='';
+  Object.keys(SPLIT).forEach(name=>{
+    const b=document.createElement('button');b.type='button';b.className='tab';b.role='tab';
+    b.setAttribute('aria-selected',name===tab);
+    const done=SPLIT[name].filter((_,i)=>checks[name+i]).length;
+    b.textContent=`${name} ${done}/${SPLIT[name].length}`;
+    b.addEventListener('click',()=>{tab=name;renderWork()});
+    tabs.appendChild(b);
+  });
+  const list=SPLIT[tab];const box=$('exs');box.innerHTML='';
+  list.forEach(([n,s],i)=>{
+    const lab=document.createElement('label');lab.className='ex';
+    lab.innerHTML=`<input type="checkbox"${checks[tab+i]?' checked':''}><span class="t"><a target="_blank" rel="noopener"></a></span><span class="s"></span>`;
+    const a=lab.querySelector('a');a.textContent=n;a.title='Watch how to do this exercise';
+    a.href='https://www.youtube.com/results?search_query='+encodeURIComponent(n+' proper form tutorial');
+    a.addEventListener('click',e=>e.stopPropagation());
+    lab.querySelector('.s').textContent=s;
+    lab.querySelector('input').addEventListener('change',e=>{checks[tab+i]=e.target.checked;store.set('fd-checks',checks);renderWork()});
+    box.appendChild(lab);
+  });
+  const done=list.filter((_,i)=>checks[tab+i]).length;
+  $('pt').textContent=done===list.length?`${tab} day complete`:`${done} of ${list.length} done`;
+  $('pb').style.width=(done/list.length*100)+'%';
+}
+$('reset').addEventListener('click',()=>{SPLIT[tab].forEach((_,i)=>delete checks[tab+i]);store.set('fd-checks',checks);renderWork()});
+
+renderMacros();renderFoods();renderWeight();renderWork();
+
+/* ---------- navigation ---------- */
+const VIEWS=[['today','Today'],['plan','Meal plan'],['train','Training'],['run','Running'],['rest','Restaurants']];
+function showView(v){
+  document.querySelectorAll('.view').forEach(x=>x.hidden=x.id!=='v-'+v);
+  document.querySelectorAll('#nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===v));
+  store.set('fd-view',v);
+}
+const ICONS={today:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',plan:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',train:'<path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/>',run:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',rest:'<path d="M3 2v7a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6a2 2 0 0 0 2 2h3zm0 0v7"/>'};
+VIEWS.forEach(([k,n])=>{
+  const b=document.createElement('button');b.type='button';b.dataset.v=k;
+  b.className='flex min-h-[58px] flex-1 flex-col items-center justify-center gap-0.5 text-[11px] fold:min-h-0 fold:flex-none fold:flex-row fold:gap-2 fold:rounded-xl fold:px-4 fold:py-2.5 fold:text-sm';
+  b.innerHTML=`<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg><span>${n}</span>`;
+  b.addEventListener('click',()=>{showView(k);window.scrollTo(0,0)});$('nav').appendChild(b);
+});
+
+/* ---------- add exercises ---------- */
+Object.keys(SPLIT).forEach(k=>{const o=document.createElement('option');o.value=o.textContent=k;$('xd').appendChild(o)});
+$('xf').addEventListener('submit',e=>{
+  e.preventDefault();const d=$('xd').value,item=[$('xn').value.trim(),$('xs').value.trim()||'3 × 10'];
+  if(!item[0])return;
+  (extra[d]=extra[d]||[]).push(item);SPLIT[d].push(item);store.set('fd-extra',extra);
+  tab=d;e.target.reset();$('xd').value=d;renderWork();
+});
+
+/* ---------- recipes and weekly plan ---------- */
+const SLOTS=['Breakfast','Lunch','Dinner','Snack'];
+let recipes=store.get('fd-recipes',null)||[
+  {id:'r1',name:'Overnight oats',slot:'Breakfast',p:20,c:55,f:10,t:'Oats, milk, protein powder, berries'},
+  {id:'r2',name:'Chicken burrito bowl',slot:'Lunch',p:45,c:70,f:14,t:''},
+  {id:'r3',name:'Salmon, rice and greens',slot:'Dinner',p:40,c:55,f:20,t:''},
+  {id:'r4',name:'Apple and peanut butter',slot:'Snack',p:6,c:30,f:9,t:''}];
+let plan=store.get('fd-plan',{});
+const mon=new Date(today);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
+const week=[...Array(7)].map((_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d});
+SLOTS.forEach(n=>{const o=document.createElement('option');o.value=o.textContent=n;$('rs').appendChild(o)});
+const rkc=r=>Math.round(r.p*4+r.c*4+r.f*9);
+function renderRecipes(){
+  $('rcount').textContent=recipes.length+' saved';
+  const ul=$('rlist');ul.innerHTML='';
+  if(!recipes.length){ul.innerHTML='<li class="empty">No recipes yet. Save one above to plan with it.</li>'}
+  recipes.forEach(r=>{
+    const li=document.createElement('li');li.className='food';
+    li.innerHTML='<span class="nm"><span class="n1"></span> <span class="tag"></span></span><span class="mc"></span><span class="kc"></span><button class="x" type="button" aria-label="Delete recipe">×</button>';
+    li.querySelector('.n1').textContent=r.name;li.querySelector('.tag').textContent=r.slot;
+    li.querySelector('.nm').title=r.t||'';
+    li.querySelector('.mc').textContent=`P ${r1(r.p)} · C ${r1(r.c)} · F ${r1(r.f)}`;
+    li.querySelector('.kc').textContent=rkc(r);
+    li.querySelector('.x').addEventListener('click',()=>{
+      recipes=recipes.filter(x=>x.id!==r.id);Object.keys(plan).forEach(k=>{if(plan[k]===r.id)delete plan[k]});
+      store.set('fd-recipes',recipes);store.set('fd-plan',plan);renderRecipes();renderCal();
+    });
+    ul.appendChild(li);
+  });
+}
+const ROWG='grid gap-2 fold:grid-cols-2 wide:grid-cols-[84px_repeat(4,minmax(0,1fr))_72px] wide:items-center';
+function renderCal(){
+  const box=$('cal');box.innerHTML='';
+  const head=document.createElement('div');
+  head.className='hidden gap-2 px-1 pb-2 text-[13px] text-[var(--muted)] wide:grid wide:grid-cols-[84px_repeat(4,minmax(0,1fr))_72px]';
+  ['Day',...SLOTS.map(x=>x==='Snack'?'Snacks':x),'Total'].forEach(t=>{const sp=document.createElement('span');sp.textContent=t;head.appendChild(sp)});
+  box.appendChild(head);
+  const list=document.createElement('div');list.className='grid gap-2.5 wide:gap-0';box.appendChild(list);
+  week.forEach(d=>{
+    const k=iso(d),row=document.createElement('div');
+    row.className=ROWG+' rounded-xl border border-solid border-[var(--line)] p-3 wide:rounded-none wide:border-0 wide:border-t wide:px-1 wide:py-1.5';
+    const lab=document.createElement('span');
+    lab.className='font-bold fold:col-span-2 wide:col-span-1'+(k===iso(today)?' text-[var(--accent)]':'');
+    lab.textContent=d.toLocaleDateString(undefined,{weekday:'short',month:'numeric',day:'numeric'});row.appendChild(lab);
+    let tot=0;
+    SLOTS.forEach(sl=>{
+      const w=document.createElement('label'),cap=document.createElement('span'),sel=document.createElement('select');
+      w.className='grid gap-1';cap.className='text-xs text-[var(--muted)] wide:sr-only';cap.textContent=sl==='Snack'?'Snacks':sl;
+      sel.setAttribute('aria-label',`${sl} on ${lab.textContent}`);
+      const z=document.createElement('option');z.value='';z.textContent='Pick a recipe';sel.appendChild(z);
+      [...recipes].sort((x,y)=>(y.slot===sl)-(x.slot===sl)).forEach(r=>{const o=document.createElement('option');o.value=r.id;o.textContent=r.name;sel.appendChild(o)});
+      const cur=plan[k+'|'+sl];sel.value=recipes.some(r=>r.id===cur)?cur:'';
+      const rr=recipes.find(r=>r.id===sel.value);if(rr)tot+=rkc(rr);
+      sel.addEventListener('change',()=>{if(sel.value)plan[k+'|'+sl]=sel.value;else delete plan[k+'|'+sl];store.set('fd-plan',plan);renderCal()});
+      w.appendChild(cap);w.appendChild(sel);row.appendChild(w);
+    });
+    const tt=document.createElement('span');tt.className='text-sm text-[var(--muted)] fold:col-span-2 wide:col-span-1 wide:text-right';
+    tt.innerHTML=`<span class="wide:hidden">Day total: </span>${tot?tot+' kcal':'–'}`;row.appendChild(tt);
+    list.appendChild(row);
+  });
+}
+$('rf').addEventListener('submit',e=>{
+  e.preventDefault();const n=x=>Math.max(parseFloat($(x).value)||0,0);
+  recipes.push({id:'r'+Date.now(),name:$('rn').value.trim(),slot:$('rs').value,p:n('rp'),c:n('rc'),f:n('rfat'),t:$('rt').value.trim()});
+  store.set('fd-recipes',recipes);e.target.reset();renderRecipes();renderCal();
+});
+$('logplan').addEventListener('click',e=>{
+  let n=0;
+  SLOTS.forEach(sl=>{const r=recipes.find(x=>x.id===plan[iso(today)+'|'+sl]);if(r){foods.push({id:Date.now()+n++,name:r.name,p:r.p,c:r.c,f:r.f});}});
+  e.target.textContent=n?`Added ${n} meal${n>1?'s':''} to today’s log`:'Nothing planned for today yet';
+  if(n)saveFoods();
+});
+
+/* ---------- running ---------- */
+const RUNPLAN=[[1,2,8],[2,2,6],[3,2,5],[5,2,4],[8,2,3],[10,1,3]];
+function wkDesc(i){
+  if(i<6){const [a,b,n]=RUNPLAN[i];return `Run ${a} min, walk ${b} min, repeat ${n} times`}
+  return i===6?'Run 20 minutes without stopping':'Run 30 minutes without stopping (about a 5K)';
+}
+let rchecks=store.get('fd-run',{}),runs=store.get('fd-runs',[]);
+function renderRun(){
+  const box=$('runplan');box.innerHTML='';let done=0,curSet=false;
+  for(let i=0;i<8;i++){
+    const d=[0,1,2].filter(j=>rchecks[i+'-'+j]).length;done+=d;
+    const row=document.createElement('div');row.className='wk';
+    if(!curSet&&d<3){row.classList.add('cur');curSet=true}
+    row.innerHTML=`<span class="wn">Week ${i+1}</span><span class="wd"></span>`;
+    row.querySelector('.wd').textContent=wkDesc(i);
+    [0,1,2].forEach(j=>{
+      const l=document.createElement('label'),c=document.createElement('input');c.type='checkbox';c.checked=!!rchecks[i+'-'+j];
+      c.addEventListener('change',()=>{rchecks[i+'-'+j]=c.checked;store.set('fd-run',rchecks);renderRun()});
+      l.appendChild(c);l.appendChild(document.createTextNode('Run '+(j+1)));row.appendChild(l);
+    });
+    box.appendChild(row);
+  }
+  $('runprog').textContent=`${done} of 24 runs done`;
+  const tot=runs.reduce((a,r)=>a+r.mi,0),long=Math.max(0,...runs.map(r=>r.mi));
+  const best=runs.length?Math.min(...runs.map(r=>r.min/r.mi)):0;
+  const pace=v=>{const m=Math.floor(v),s=Math.round((v-m)*60);return m+':'+String(s===60?0:s).padStart(2,'0')};
+  $('rstats').innerHTML=`<div><div class="big">${r1(tot)}</div><span>total miles</span></div><div><div class="big">${r1(long)}</div><span>longest run (mi)</span></div><div><div class="big">${best?pace(best):'–'}</div><span>best pace (min/mi)</span></div>`;
+  $('nextlong').textContent=long?`Next long run: about ${r1(long*1.1)} mi`:'Log a run to get your next long-run target';
+  const ul=$('runlist');ul.innerHTML=runs.length?'':'<li class="empty">No runs logged yet. Log your first one above.</li>';
+  [...runs].sort((a,b)=>b.d.localeCompare(a.d)).forEach(r=>{
+    const li=document.createElement('li');li.className='food';
+    li.innerHTML='<span class="nm"></span><span class="mc"></span><span class="kc" style="width:84px"></span><button class="x" type="button" aria-label="Delete run">×</button>';
+    li.querySelector('.nm').textContent=new Date(r.d+'T12:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+    li.querySelector('.mc').textContent=`${r.mi} mi · ${r1(r.min)} min`;li.querySelector('.kc').textContent=pace(r.min/r.mi)+' /mi';
+    li.querySelector('.x').addEventListener('click',()=>{runs=runs.filter(x=>x.id!==r.id);store.set('fd-runs',runs);renderRun()});
+    ul.appendChild(li);
+  });
+}
+$('rd').value=iso(today);
+$('runf').addEventListener('submit',e=>{
+  e.preventDefault();runs.push({id:Date.now(),d:$('rd').value,mi:parseFloat($('rm').value),min:parseFloat($('rmin').value)});
+  store.set('fd-runs',runs);e.target.reset();$('rd').value=iso(today);renderRun();
+});
+
+/* ---------- restaurant database ---------- */
+let rdb=null,rrows=store.get('fd-rest',[]);
+function rLocal(){rdb=null;rrows=store.get('fd-rest',[]);$('rnote').textContent='Shared storage isn’t available in this view, so entries save on this device only. Copy values from each restaurant’s official nutrition page.';renderRest()}
+async function initRest(){
+  if(!(window.claude&&claude.use)){rLocal();return}
+  const t=setTimeout(rLocal,10000);
+  try{
+    const d=await claude.use('db');clearTimeout(t);
+    if(!d){rLocal();return}
+    rdb=d;$('rnote').textContent='Shared database: entries are visible to everyone who can open this page. Copy values from each restaurant’s official nutrition page.';
+    d.collection('restaurants').limit(500).onSnapshot(sn=>{rrows=sn.docs.map(x=>({id:x.id,...x.data()}));renderRest()},()=>rLocal());
+  }catch(e){clearTimeout(t);rLocal()}
+}
+const MENUS={"McDonald’s":[
+["Hamburger",250,12,30,9],["Cheeseburger",300,15,31,13],["McDouble",390,22,32,20],["Double Cheeseburger",440,25,34,24],
+["Quarter Pounder with Cheese",520,30,42,26],["Double Quarter Pounder with Cheese",740,48,43,42],["Quarter Pounder with Cheese Deluxe",630,30,44,37],["Bacon Quarter Pounder with Cheese",630,36,43,35],
+["Big Mac",580,25,45,34],["McChicken",390,14,38,21],["McCrispy",470,26,46,20],["Deluxe McCrispy",530,27,48,26],["Spicy McCrispy",530,27,48,26],["Filet-O-Fish",380,16,38,19],
+["Chicken McNuggets, 4 piece",170,9,10,10],["Chicken McNuggets, 6 piece",250,14,15,15],["Chicken McNuggets, 10 piece",410,23,26,24],["Chicken McNuggets, 20 piece",830,46,51,49],["McCrispy Strips, 3 piece",400,31,24,20],
+["Egg McMuffin",310,17,30,13],["Hash Browns",140,2,18,8]]};
+const CHAINS=["Chick-fil-A","Wendy’s","Taco Bell","Burger King","Subway","Chipotle","KFC"];
+let curChain=store.get('fd-chain','McDonald’s');
+function chainList(){const set=new Set([...Object.keys(MENUS),...CHAINS]);rrows.forEach(r=>r.r&&set.add(r.r));return [...set].sort((x,y)=>x.localeCompare(y))}
+function rowEl(r,builtin){
+  const li=document.createElement('li');li.className='food';
+  li.innerHTML='<span class="nm"><b class="a"></b> <span class="b"></span> <span class="tag"></span></span><span class="mc"></span><span class="kc"></span><button class="btn ghost" type="button">Add to log</button><button class="x" type="button" aria-label="Delete entry">×</button>';
+  li.querySelector('.a').textContent=r.r;li.querySelector('.b').textContent=r.i;
+  li.querySelector('.tag').textContent=builtin?'Starter menu':'Yours';
+  li.querySelector('.mc').textContent=`P ${r1(r.p)} · C ${r1(r.c)} · F ${r1(r.f)}`;li.querySelector('.kc').textContent=r.k;
+  li.querySelector('.btn').addEventListener('click',e=>{
+    foods.push({id:Date.now(),name:`${r.r}: ${r.i}`,p:r.p,c:r.c,f:r.f,kcal:r.k});saveFoods();
+    const btn=e.target;btn.textContent='Added';setTimeout(()=>{btn.textContent='Add to log'},1500);
+    const tot=foods.reduce((a,x)=>a+kcalOf(x),0);
+    showToast(`Added ${r.i} (${r.k} kcal). Today: ${Math.round(tot)} of ${GOAL.kcal} kcal.`);
+  });
+  const x=li.querySelector('.x');
+  if(builtin)x.remove();
+  else x.addEventListener('click',async()=>{
+    try{if(rdb)await rdb.collection('restaurants').doc(r.id).delete();else{rrows=rrows.filter(y=>y.id!==r.id);store.set('fd-rest',rrows);renderRest()}}
+    catch(err){$('rnote').textContent='You don’t have permission to delete this entry.'}
+  });
+  return li;
+}
+function renderRest(){
+  const names=chainList();
+  if(curChain!=='*'&&!names.includes(curChain))curChain='*';
+  const sel=$('chain');sel.innerHTML='';
+  [['*','All restaurants'],...names.map(n=>[n,n])].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o)});
+  sel.value=curChain;
+  $('chains').innerHTML='';names.forEach(n=>{const o=document.createElement('option');o.value=n;$('chains').appendChild(o)});
+  const q=$('sq').value.trim().toLowerCase(),ul=$('rslist');ul.innerHTML='';
+  const starter=[];Object.keys(MENUS).forEach(c=>{if(curChain==='*'||curChain===c)MENUS[c].forEach(m=>starter.push({r:c,i:m[0],k:m[1],p:m[2],c:m[3],f:m[4]}))});
+  const mine=rrows.filter(r=>curChain==='*'||r.r===curChain).sort((a,b)=>(a.r+a.i).localeCompare(b.r+b.i));
+  const match=r=>!q||(r.r+' '+r.i).toLowerCase().includes(q);
+  const src=$('rsrc');src.textContent='';
+  if(curChain!=='*'){
+    const a=document.createElement('a');a.className='link';a.target='_blank';a.rel='noopener';a.textContent='Open the official nutrition info';
+    a.href='https://www.google.com/search?q='+encodeURIComponent(curChain+' official nutrition information');
+    src.append(MENUS[curChain]
+      ?'Starter values were cross-checked across two third-party nutrition tables in November 2026. Chains change recipes and sizes, so confirm on the official page. ':
+      'There’s no starter menu for this restaurant yet. Check its official page, then add the items you eat below. ',a);
+  }else src.textContent='Showing every starter and saved item. Pick a restaurant to narrow the list.';
+  const rows=[...starter.filter(match).map(r=>[r,true]),...mine.filter(match).map(r=>[r,false])];
+  if(!rows.length){ul.innerHTML=`<li class="empty">${q?'No matches.':'No items yet. Add one below to start this menu.'}</li>`;return}
+  rows.forEach(([r,b])=>ul.appendChild(rowEl(r,b)));
+}
+$('chain').addEventListener('change',e=>{curChain=e.target.value;store.set('fd-chain',curChain);if(curChain!=='*')$('sr').value=curChain;renderRest()});
+$('sq').addEventListener('input',renderRest);
+$('rsf').addEventListener('submit',async e=>{
+  e.preventDefault();const n=x=>Math.max(parseFloat($(x).value)||0,0);
+  const row={r:$('sr').value.trim(),i:$('si').value.trim(),k:Math.round(n('sk')),p:n('sp'),c:n('sc'),f:n('sf'),ts:Date.now()};
+  try{
+    if(rdb)await rdb.collection('restaurants').add(row);
+    else{row.id='l'+row.ts;rrows.push(row);store.set('fd-rest',rrows);renderRest()}
+    e.target.reset();$('sr').value=curChain==='*'?'':curChain;$('si').focus();
+  }catch(err){$('rnote').textContent='Couldn’t save to the shared database. Your role may be view-only.'}
+});
+
+renderRecipes();renderCal();renderRun();initRest();renderRest();if(curChain!=='*')$('sr').value=curChain;
+
+/* ---------- fasting clock ---------- */
+const FP=[[12,'12:12'],[14,'14:10'],[16,'16:8'],[18,'18:6'],[20,'20:4'],[23,'23:1 (one meal a day)']];
+let fast=store.get('fd-fast',{active:null,hours:16,hist:[]});
+const pad2=n=>String(n).padStart(2,'0');
+const fmtClock=ms=>{const t=Math.floor(ms/1000);return Math.floor(t/3600)+':'+pad2(Math.floor(t%3600/60))+':'+pad2(t%60)};
+const fmtShort=ms=>{const m=Math.floor(ms/60000);return Math.floor(m/60)+'h '+pad2(m%60)+'m'};
+const tod=t=>new Date(t).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+const FC=2*Math.PI*84;
+FP.forEach(([h,n])=>{const o=document.createElement('option');o.value=h;o.textContent=n;$('fplan').appendChild(o)});
+$('fplan').value=fast.hours;
+const ring=$('fring');
+const ftrack=el('circle',{cx:100,cy:100,r:84,fill:'none','stroke-width':14},ring);ftrack.style.stroke='#232936';
+const fprog=el('circle',{cx:100,cy:100,r:84,fill:'none','stroke-width':14,'stroke-linecap':'round'},ring);fprog.style.stroke='var(--accent)';
+function saveFast(){store.set('fd-fast',fast)}
+function tickFast(){
+  const a=fast.active,g=fast.hours*3600000;
+  if(a){
+    const e=Math.max(Date.now()-a,0),p=Math.min(e/g,1);
+    fprog.style.strokeDasharray=`${FC*p} ${FC}`;fprog.style.stroke=e>=g?'var(--ok)':'var(--accent)';
+    $('fmid').innerHTML=`<b style="font-size:26px">${fmtClock(e)}</b><span>${e>=g?'Goal reached':'of '+fast.hours+' hours'}</span>`;
+    $('finfo').textContent=e<g?`Started ${tod(a)}. Eating window opens at ${tod(a+g)}, in ${fmtShort(g-e)}.`:`Started ${tod(a)}. You passed your goal ${fmtShort(e-g)} ago.`;
+    $('fstate').textContent='Fasting';
+  }else{
+    fprog.style.strokeDasharray=`0 ${FC}`;
+    const last=fast.hist[0];
+    $('fmid').innerHTML='<b style="font-size:22px">Eating</b><span>window open</span>';
+    $('finfo').textContent=last?`Your last fast ended ${fmtShort(Date.now()-last.end)} ago.`:`Start when you finish your last meal. Plan: ${fast.hours} hours fasting.`;
+    $('fstate').textContent='Not fasting';
+  }
+}
+function renderFast(){
+  const on=!!fast.active;
+  $('fgo').textContent=on?'End fast':'Start fast';
+  $('fedit').hidden=!on;if(!on)$('fbox').style.display='none';
+  const ul=$('fhist');ul.innerHTML=fast.hist.length?'':'<li class="empty">Finished fasts will show up here.</li>';
+  fast.hist.forEach(h=>{
+    const li=document.createElement('li');li.className='food';
+    li.innerHTML='<span class="nm"></span><span class="mc"></span><span class="tag"></span>';
+    li.querySelector('.nm').textContent=new Date(h.start).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+    li.querySelector('.mc').textContent=fmtShort(h.end-h.start);
+    li.querySelector('.tag').textContent=(h.end-h.start)>=h.hours*3600000?'Goal met':'Ended early';
+    ul.appendChild(li);
+  });
+  tickFast();
+}
+$('fplan').addEventListener('change',e=>{fast.hours=parseInt(e.target.value,10);saveFast();tickFast()});
+$('fgo').addEventListener('click',()=>{
+  if(fast.active){fast.hist.unshift({start:fast.active,end:Date.now(),hours:fast.hours});fast.hist=fast.hist.slice(0,7);fast.active=null}
+  else fast.active=Date.now();
+  saveFast();renderFast();
+});
+$('fedit').addEventListener('click',()=>{
+  const d=new Date(fast.active);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+  $('fstart').value=d.toISOString().slice(0,16);$('fbox').style.display='flex';
+});
+$('fsave').addEventListener('click',()=>{
+  const t=new Date($('fstart').value).getTime();
+  if(t&&t<=Date.now()){fast.active=t;saveFast();$('fbox').style.display='none';tickFast()}
+});
+renderFast();setInterval(tickFast,1000);
+
+/* ---------- toast ---------- */
+let toastT;
+function showToast(msg){
+  $('tmsg').textContent=msg;$('toast').hidden=false;clearTimeout(toastT);
+  toastT=setTimeout(()=>{$('toast').hidden=true},6000);
+}
+$('tgo').addEventListener('click',()=>{$('toast').hidden=true;showView('today');window.scrollTo({top:0,behavior:'smooth'})});
+
+/* ---------- water tracker ---------- */
+let water=store.get('fd-water',{goal:96,days:{}});
+const tk=()=>iso(new Date());
+const dayList=()=>water.days[tk()]||[];
+const sumOz=a=>a.reduce((x,y)=>x+y,0);
+function saveWater(){
+  const keep=Object.keys(water.days).sort().slice(-30),d={};keep.forEach(k=>d[k]=water.days[k]);water.days=d;
+  store.set('fd-water',water);renderWater();
+}
+function addWater(oz){
+  if(!(oz>0))return;
+  (water.days[tk()]=water.days[tk()]||[]).push(r1(oz));saveWater();
+}
+function renderWater(){
+  const tot=sumOz(dayList()),g=water.goal,p=Math.min(tot/g,1);
+  const h=125*p;$('h2ofill').setAttribute('y',135-h);$('h2ofill').setAttribute('height',h);
+  $('h2ototal').textContent=r1(tot)+' oz';
+  $('h2oleft').textContent=tot>=g?'Goal reached. Nice work.':`${r1(g-tot)} oz to go of ${g} oz`;
+  $('h2osub').textContent=Math.round(p*100)+'% of goal';
+  if(document.activeElement!==$('h2ogoal'))$('h2ogoal').value=g;
+  const wk=$('h2oweek');wk.innerHTML='';
+  for(let i=6;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);const t=sumOz(water.days[iso(d)]||[]);
+    const col=document.createElement('div'),bar=document.createElement('i');
+    bar.style.height=Math.min(t/g,1)*100*0.7+'%';if(t>=g)bar.className='hit';
+    col.title=`${d.toLocaleDateString(undefined,{weekday:'long'})}: ${r1(t)} oz`;
+    col.appendChild(bar);col.appendChild(document.createTextNode(d.toLocaleDateString(undefined,{weekday:'narrow'})));
+    wk.appendChild(col);
+  }
+}
+[8,12,16,24].forEach(oz=>{const b=document.createElement('button');b.type='button';b.textContent='+'+oz;b.title='Add '+oz+' oz';b.addEventListener('click',()=>addWater(oz));$('h2obtns').appendChild(b)});
+$('h2oadd').addEventListener('click',()=>{addWater(parseFloat($('h2ocust').value));$('h2ocust').value=''});
+$('h2oundo').addEventListener('click',()=>{const l=water.days[tk()];if(l&&l.length){l.pop();saveWater()}});
+$('h2ogoal').addEventListener('change',e=>{const v=parseInt(e.target.value,10);if(v>=16&&v<=300){water.goal=v;saveWater()}else e.target.value=water.goal});
+renderWater();
+showView(store.get('fd-view','today'));
+
+/* ---------- weight goals ---------- */
+function latestW(){const k=Object.keys(weights).sort();return k.length?weights[k[k.length-1]]:null}
+function renderGoal(){
+  const g=$('gprog');g.innerHTML='';
+  if(!profile){const b=document.createElement('button');b.className='btn ghost';b.type='button';b.textContent='Set your starting and goal weight';b.addEventListener('click',openSetup);g.appendChild(b);return}
+  const cur=latestW(),tot=Math.abs(profile.goal-profile.start),dir=Math.sign(profile.goal-profile.start);
+  const done=cur==null?0:Math.min(Math.max((cur-profile.start)*dir,0),tot);
+  const left=cur==null?tot:Math.max((profile.goal-cur)*dir,0);
+  g.innerHTML=`<div class="barlab"><span>Start ${profile.start} lb</span><span>Goal ${profile.goal} lb</span></div><div class="bar"><i style="width:${tot?done/tot*100:0}%;background:var(--ok)"></i></div><div class="tip">${left>0?r1(left)+' lb to go':'Goal reached'} · ${r1(done)} lb ${dir<0?'lost':'gained'} so far</div>`;
+}
+const ov=$('setup');
+function openSetup(){
+  $('ws').value=profile?profile.start:(weightsSample?'':(latestW()||''));
+  $('wg').value=profile?profile.goal:'';$('serr').textContent='';ov.hidden=false;$('ws').focus();
+}
+function closeSetup(){ov.hidden=true}
+$('goalbtn').addEventListener('click',openSetup);
+$('scancel').addEventListener('click',()=>{if(!profile)store.set('fd-skip',true);closeSetup()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!ov.hidden)closeSetup()});
+$('setupform').addEventListener('submit',e=>{
+  e.preventDefault();
+  const a=parseFloat($('ws').value),b=parseFloat($('wg').value);
+  if(!(a>=50&&a<=700&&b>=50&&b<=700)){$('serr').textContent='Enter both weights between 50 and 700 lb.';return}
+  if(a===b){$('serr').textContent='Your goal weight needs to differ from your starting weight.';return}
+  profile={start:r1(a),goal:r1(b)};store.set('fd-profile',profile);
+  if(weightsSample){weights={};weights[iso(today)]=profile.start;weightsSample=false;store.set('fd-weights',weights)}
+  closeSetup();renderWeight();
+});
+if(!profile&&!store.get('fd-skip',false))openSetup();
+
+</script>
+</body>
+</html>
